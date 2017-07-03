@@ -32,5 +32,9 @@ def allmain():
 
 if __name__ == '__main__':
 
-    # path_list内全てのpdfに対してmainを行う。
-    allmain()
+    #pdfファイルひとつひとつに対し行う
+    path=path7
+    savepath='sample.json'
+    main(path,savepath)
+    
+    

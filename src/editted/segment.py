@@ -25,13 +25,13 @@ class SegmentAnalysis(object):
 
     for item in items:
       sentences=sentences.replace(item+"は､", item+"は")
-      sentences=sentences.replace("%)"+item, "%)､"+item)  
+      sentences=sentences.replace("%)"+item, "%)､"+item)
 
     ####################
-    
+
     ans={}
     t=""
-    # print("########sentence################")    
+    # print("########sentence################")
     # print(sentences)
     for sentence in sentences.split("｡"):
       sentence=sentence.replace(" ","")
@@ -53,8 +53,8 @@ class SegmentAnalysis(object):
 
               float_value=float(kanji_to_num(value))
               ans["calc"+item] = debt_check(phrase,float_value)   #赤字や営業損失な場合はマイナスの符号をつける
-              
-              flag=True        
+
+              flag=True
             except AttributeError:
               pass
             ################################################
@@ -71,7 +71,7 @@ class SegmentAnalysis(object):
                   ans["calc_prev"+item] = float_prev
 
                 else:
-                  
+
                   prev = around_extract_pre_value(pre_p,phrase,post_p)
                   # print("JKKKKKKKKKK")
                   # print(prev)
@@ -81,15 +81,15 @@ class SegmentAnalysis(object):
                     ans["calc_prev"+item] = float_prev
 
               except AttributeError:
-              
+
 
                 pass
             ################################################
-    
+
     return ans
 
   def find_seg_section(self):
-    
+
     ###########開始と終わりの手がかり語がある場合#####################
     seg_counter=0
     start_header, end_header, start_keyword, end_keyword,start_suddenly = _seg_find_keyword()
@@ -117,12 +117,12 @@ class SegmentAnalysis(object):
         if w in sentence:
           flag=True
     #######################################################
-    
+
     ###########開始の手がかり語がない場合#####################
     if seg_counter == 0:
       flag=False
       flag2=True
-      for index,sentence in enumerate(self.sentences):  
+      for index,sentence in enumerate(self.sentences):
 
         if flag2:  #一度endwordが来たらbreak
           ##キーワードが含まれているか flag→True
@@ -133,14 +133,14 @@ class SegmentAnalysis(object):
                 print("SUDDENNNNN")
                 flag=True
 
-            
-        
-          if flag:  
+
+
+          if flag:
             ##キーワードが含まれているか flag→False
             for w in end_header:
               if w in sentence:
                 flag2=False
-          
+
             if flag2 and "｡" not in sentence and "､" not in sentence:
               segment_name=sentence
               print("!!!!!!!!!!!!!!!!!")
@@ -149,13 +149,13 @@ class SegmentAnalysis(object):
               _dict=self.find_seg_value(self.paragraph[index])
               if len(_dict)>0:
                 self.segment_dict[segment_name]=_dict
-          
-           
-          
-            
+
+
+
+
     #######################################################
 
-    
+
 
 
 def _seg_find_keyword():
@@ -196,13 +196,13 @@ def paragraph(sentences):
         ans[key_index]=""
     else:
       ans[key_index]+=sentence
-      
+
   return ans
 def zh(text):
   text = str(zenhan.z2h(text))
   text=text.replace("〜","~").replace("ー","-")
   return text
- 
+
 def extract_value(sentence,item):
   sentence=sentence.replace("､","、")
   sentence=sentence.replace("円で前期比","円で、前期比")
@@ -211,7 +211,7 @@ def extract_value(sentence,item):
   if len(re.findall("[\d,０１２３４５６７８９百千万億兆]+円",sentence)) > 1:
     if re.search("[\d,０１２３４５６７８９百千万億兆]+円の損失となりました",sentence):
       new_sentence=re.search("[\d,０１２３４５６７８９百千万億兆]+円の損失となりました",sentence).group()
-    
+
     else:
       c = CaboCha.Parser()
       tree =  c.parse(sentence)
@@ -225,7 +225,7 @@ def extract_value(sentence,item):
             if line.split(" ")[0] == "*":
                 tag   = int(line.split(" ")[1])
                 desti = int(line.split(" ")[2].replace("D",""))
-                
+
                 flag=True
                 for l in kakariuke_list:
                     if tag in l:
@@ -251,7 +251,7 @@ def extract_value(sentence,item):
     value=re.search("[\d,０１２３４５６７８９百千万億兆]+円の損失",new_sentence).group()
   else:
     value=re.search("[\d,０１２３４５６７８９百千万億兆]+円",new_sentence).group()
-  
+
 
   # new_sentence=make_newsentence(d,kakariuke_list,"前期比")
   # if "増" in new_sentence:
@@ -288,7 +288,7 @@ def extract_pre_value(phrase,item):
   phrase=zh(phrase)
   #print(phrase)
   prev_re = find_prev_re()
-  
+
   for p in phrase.split("､"):
     if item in p:
       for pre in prev_re:
@@ -302,7 +302,7 @@ def extract_pre_value(phrase,item):
     return "prev"
 
 def calc_pre_value(float_value,_re):
-  
+
   pencent_re = "[\d.]+%"
   value_re   = "[\d.,百千万億兆]+円"
   """
@@ -348,7 +348,7 @@ def kanji_to_num(value):
       TRANSMANS = {'万': 10000,
                    '億': 100000000,
                    '兆': 1000000000000}
-    
+
       def _transvalue(sj, re_obj=re_kunit, transdic=TRANSUNIT):
           unit = 1
           result = 0
@@ -371,10 +371,10 @@ def kanji_to_num(value):
               arabic = _transvalue(suji, re_manshin, TRANSMANS)
               arabic = '{:,}'.format(arabic) if sep else str(arabic)
               transuji = transuji.replace(suji, arabic)
-      
+
       return transuji.replace("円","").replace(",","").replace("の損失","")
 
-  
+
 
 def find_reason_items():
   f = open('./txt/find_items.txt', 'r')
@@ -417,7 +417,7 @@ def post_phrase(phrases,i):
 
 def around_extract_pre_value(pre_p,phrase,post_p):
   prev_re = find_prev_re()
-  
+
   pre=""
   for _re in prev_re:
     if re.search(_re,pre_p):
@@ -458,7 +458,7 @@ if __name__ == '__main__':
     sentence="営業利益は前連結会計年度に比べて846億円減少し122億円の損失となりました"
     item="営業利益"
     print(kanji_to_num("2兆8,902億32百万円"))
-    # ans=extract_value(sentence,item)    
+    # ans=extract_value(sentence,item)
     # print(ans)
     # print("----------")
     # prev=extract_pre_value(sentence,item)
@@ -468,17 +468,3 @@ if __name__ == '__main__':
     # print("----------")
     # prev="前期比23億円(59.8%)の増益"
     # print(calc_pre_value(ans,prev))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
