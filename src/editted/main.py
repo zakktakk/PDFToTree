@@ -1,40 +1,37 @@
 # -*- coding: utf-8 -*-
-#実行環境anaconda3-4.2.0
+# TODO INPUT_DIRとかの定義をconfigに
+
+import glob
+
 import read_pdf
-from CorporateInfo import CorporateAnalysis 
 
-#pdfファイまでのパス
-path1="/Users/tomoki/Downloads/TDNET/3407Asahikasei.pdf"
-path2="/Users/tomoki/Downloads/TDNET/7203 Nissan.pdf"
-path3="/Users/tomoki/Downloads/TDNET/4503 Astellas Pharma.pdf"
-path4="/Users/tomoki/Downloads/TDNET/8167 Aeon.pdf"
-path5="/Users/tomoki/Downloads/TDNET/8316 SMBC.pdf"
-path6="/Users/tomoki/Downloads/TDNET/9983 Fierstretailing.pdf"
-path7="/Users/tomoki/Downloads/TDNET/7203 Toyota.pdf"
-#path="/Users/tomoki/Downloads/TDNET/8002 Marubeni.pdf"
-#path="/Users/tomoki/Downloads/TDNET/MARU_1703_tanshin_jpn.pdf"
-#path="/Users/tomoki/Downloads/TDNET/decry.pdf"
-#path="/Users/tomoki/Downloads/TDNET/MARU_16123Q_tanshin_jpn.pdf"
-path_list=[path1,path2,path3,path4,path5,path6,path7]
+from CorporateInfo import CorporateAnalysis
+from typing import List
 
 
-def main(path,savepath):
+PDF_INPUT_DIR = "../../inputs/pdf/"
+JSON_OUTPUT_DIR = "../../outputs/json/"
+
+def pdf2json(path:str, savepath:str) -> None:
+    """
+    @description function for convert pdf to json file
+    @param path path to pdf file
+    @param savepath path for converted json file
+    """
     raw_text = read_pdf.pdf_to_text(path)
     CA = CorporateAnalysis(raw_text)
     CA.write_json(savepath)
 
+def main(pdf_paths:List[str]) -> None:
+    """
+    @description main function for convert pdf files to json files
+    @param pdfs paths to pdf files
+    """
+    for p in pdf_paths:
+        savepath = p.replace(PDF_INPUT_DIR, JSON_OUTPUT_DIR).replace("pdf", "json")
+        pdf2json(p, savepath)
 
-def allmain():
-    for path in path_list:
-        savepath=path.split('/')[-1][:-3]+'json'
-        main(path,savepath)
-
-
-if __name__ == '__main__':
-
-    #pdfファイルひとつひとつに対し行う
-    path=path7
-    savepath='sample.json'
-    main(path,savepath)
-    
-    
+if __name__ == "__main__":
+    # path to pdf
+    pdfs = glob.glob(INPUT_DIR + "*.pdf")
+    main(pdfs)

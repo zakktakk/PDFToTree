@@ -44,13 +44,13 @@ def read(path):
 
 
         retstr = StringIO()
-        
-        
+
+
         PDFDocument.debug = debug
         PDFParser.debug = debug
         CMapDB.debug = debug
         PDFPageInterpreter.debug = debug
-    
+
         rsrcmgr = PDFResourceManager(caching=caching)
         device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams,
                                    imagewriter=imagewriter)
@@ -71,7 +71,7 @@ def read(path):
         fp.close()
         device.close()
 
-        
+
         return text
 
 def second(path):
@@ -91,11 +91,3 @@ if __name__ == '__main__':
     #path="/Users/tomoki/Downloads/TDNET/8316 SMBC.pdf"
 
     read(path)
-
-
-
-
-
-
-
-

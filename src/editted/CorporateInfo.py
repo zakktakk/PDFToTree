@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+
 import json
+
 from segment import SegmentAnalysis
 from future import FutureAnalysis
 from reason import ReasonAnalysis
@@ -7,7 +9,7 @@ from reason import ReasonAnalysis
 #jsonファイルを作る
 #セグメント情報、将来の文章、理由の文章を抽出し、jsonファイルに挿入
 class CorporateAnalysis(object):
-    def __init__(self,raw_text):    
+    def __init__(self,raw_text):
         self.raw_text=raw_text
         self.sentences=make_sentences(raw_text)
         self.keywords=keywords_open()
@@ -21,16 +23,16 @@ class CorporateAnalysis(object):
         data=self.make_json()
 
         with open(savepath, 'w') as outfile:
-            json.dump(data, outfile,ensure_ascii=False, indent=4, sort_keys=True, separators=(',', ': '))   
+            json.dump(data, outfile,ensure_ascii=False, indent=4, sort_keys=True, separators=(',', ': '))
 
     def make_json(self):
-        
+
         #########セグメント、将来、理由の抽出部分###########
         self.segment()
         self.future()
         self.reason()
         ###############################################
-        
+
         print(self.data)
         return self.data
 
@@ -40,7 +42,7 @@ class CorporateAnalysis(object):
             self.data["segment"]="単一の事業"
         else:                        #セグメント情報がある場合
             return self.segment_detail()
-    
+
     def singlecheck(self):
         #単一のセグメントであるかチェック(single_segment.txtによる条件分岐)
         flag=False
@@ -48,7 +50,7 @@ class CorporateAnalysis(object):
             if flag:
                 break
 
-            else:  
+            else:
                 for ll in self.single_segment_word:
                     miniflag=False
                     for l in ll:
@@ -78,11 +80,11 @@ class CorporateAnalysis(object):
     def future(self):
         #将来の予測に関する文章をfuture.py内から呼び出し
         self.data["圧縮前_将来の文章"] = self.FA.extract_future_sentences(self.sentences)
-        
+
         #対象の文章が多いものに関しては6文までスコアが高い順番に抽出
         import summarize
         self.data["future_sentences"] = summarize.compression(self.data["圧縮前_将来の文章"],6)
-    
+
     def reason(self):
         #理由部分の抽出をreason.pyから呼び出し
         self.data["reason"] = self.RA.reason_sentences(self.sentences)

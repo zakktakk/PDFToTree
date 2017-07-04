@@ -1,9 +1,11 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 import sys
-#from cStringIO import StringIO
+import os
+import zenhan
+
 from io import StringIO
+
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
@@ -13,24 +15,23 @@ from pdfminer.converter import XMLConverter, HTMLConverter, TextConverter
 from pdfminer.cmapdb import CMapDB
 from pdfminer.layout import LAParams
 from pdfminer.image import ImageWriter
-import os
+
 from subprocess import call
-import zenhan
 from tqdm import tqdm
 from PyPDF2 import PdfFileWriter, PdfFileReader
 
 def pdf_to_text(path):
     try:
         text=read(path)
-        
-    except: 
+
+    except:
+        #PDFのdecrypt
         pdf_filename_decr=os.getcwd()+"/decrypted.pdf"
-        
         command="qpdf --password='' --decrypt "+path+" "+pdf_filename_decr
-        print(pdf_filename_decr)
+
         call('qpdf --password=%s --decrypt %s %s' %('', path, pdf_filename_decr), shell=True)
         os.system(command)
-        
+
         #########################################################
         # pdfReader = PdfFileReader(open(path, 'rb'))
         # pdfReader.decrypt('')
@@ -38,18 +39,18 @@ def pdf_to_text(path):
         # for pageNum in range(pdfReader.numPages):
         #   pageObj = pdfReader.getPage(pageNum)
         #   pdfWriter.addPage(pageObj)
-          
+
         # pdfOutputFile = open(pdf_filename_decr, 'wb')
         # pdfWriter.write(pdfOutputFile)
         # pdfOutputFile.close()
         # print("------")
         # ############################################################
         text=read(pdf_filename_decr)
-       
+
 
     text = str(zenhan.z2h(text))
     text = text.replace("〜","~").replace("ー","-").replace("\x0c","").replace("\xa0","")
-    
+
     new_text=""
     for text in text.split("\n"):
         if ("株" in text or "㈱" in text) and "平成" in text and "決算短信" in text:
@@ -57,8 +58,8 @@ def pdf_to_text(path):
                 if 0<len(t) \
                     and not(("株" in t or "㈱" in t) and "平成" in t and "決算短信" in t) \
                     and not(t.replace("-","").replace(" ","").isdigit()):
-                
-                    if "､" not in t and "｡" not in t and len(t)<30: 
+
+                    if "､" not in t and "｡" not in t and len(t)<30:
                         new_text+="\n"+t+"\n"
                     else:
                          new_text+=t
@@ -67,12 +68,12 @@ def pdf_to_text(path):
             and not(("株" in text or "㈱" in text) and "平成" in text and "決算短信" in text) \
             and not(text.replace("-","").replace(" ","").isdigit()):
 
-            if "､" not in text and "｡" not in text and len(text)<30: 
+            if "､" not in text and "｡" not in text and len(text)<30:
               new_text+="\n"+text+"\n"
             else:
               new_text+=text
-   
-    
+
+
     return new_text
 
 def read(path):
@@ -98,13 +99,13 @@ def read(path):
 
 
         retstr = StringIO()
-        
-        
+
+
         PDFDocument.debug = debug
         PDFParser.debug = debug
         CMapDB.debug = debug
         PDFPageInterpreter.debug = debug
-    
+
         rsrcmgr = PDFResourceManager(caching=caching)
         device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams,
                                    imagewriter=imagewriter)
@@ -124,7 +125,7 @@ def read(path):
                 if "Toyota" in path:
                     if number > pages-5:
                         flag=False
-                if flag:       
+                if flag:
                     page.rotate = (page.rotate+rotation) % 360
                     interpreter.process_page(page)
                     pbar.update(1)
@@ -135,16 +136,3 @@ def read(path):
         device.close()
 
         return text
-
-
-
-
-if __name__ == '__main__':
-    #path=os.getcwd()+"/decrypted.pdf"
-    path="/Users/tomoki/Downloads/TDNET/decryp.pdf"
-    main(path)
-
-
-
-
-
