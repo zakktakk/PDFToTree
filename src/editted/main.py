@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # TODO INPUT_DIRとかの定義をconfigに
+# TODO allmainとmainの役割のを作る(今はmainの方消しちゃった)
 
 import glob
 

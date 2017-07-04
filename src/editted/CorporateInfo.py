@@ -90,7 +90,6 @@ class CorporateAnalysis(object):
         self.data["reason"] = self.RA.reason_sentences(self.sentences)
 
 
-
 def single_segment_open():
     f = open('./txt/single_segment.txt', 'r')
     single_segment_word=[]
