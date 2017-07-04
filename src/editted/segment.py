@@ -76,59 +76,60 @@ class SegmentAnalysis(object):
                                 pass
         return ans
 
-  def find_seg_section(self):
-    ###########開始と終わりの手がかり語がある場合#####################
-    seg_counter=0
-    start_header, end_header, start_keyword, end_keyword,start_suddenly = _seg_find_keyword()
-    flag=False
-    for index,sentence in enumerate(self.sentences):
-      ##キーワードが含まれているか flag→False
-      for w in end_header:
-        if w in sentence:
-          flag=False
-
-      if flag:
-        if "｡" not in sentence and "､" not in sentence and len(sentence)>1:
-          segment_name=sentence
-          _dict =self.find_seg_value(self.paragraph[index])
-          if len(_dict)>0:
-            self.segment_dict[segment_name]=_dict
-          seg_counter+=1
-
-      ##キーワードが含まれているか flag→True
-      for w in start_header:
-        if w in sentence:
-          flag=True
-      for w in start_keyword:
-        if w in sentence:
-          flag=True
-
-    ###########開始の手がかり語がない場合#####################
-    if seg_counter == 0:
-      flag=False
-      flag2=True
-      for index,sentence in enumerate(self.sentences):
-
-        if flag2:  #一度endwordが来たらbreak
-          ##キーワードが含まれているか flag→True
-          if "｡" not in sentence and "､" not in sentence:
-            for sudden in start_suddenly:
-              if sudden in sentence:
-               flag=True
-
-
-
-          if flag:
+    def find_seg_section(self):
+        ###########開始と終わりの手がかり語がある場合#####################
+        seg_counter=0
+        start_header, end_header, start_keyword, end_keyword,start_suddenly = _seg_find_keyword()
+        flag=False
+        for index,sentence in enumerate(self.sentences):
             ##キーワードが含まれているか flag→False
             for w in end_header:
-              if w in sentence:
-                flag2=False
+                if w in sentence:
+                    flag=False
 
-            if flag2 and "｡" not in sentence and "､" not in sentence:
-              segment_name=sentence
-             _dict=self.find_seg_value(self.paragraph[index])
-              if len(_dict)>0:
-                self.segment_dict[segment_name]=_dict
+            if flag:
+                if "｡" not in sentence and "､" not in sentence and len(sentence)>1:
+                    segment_name=sentence
+                    _dict =self.find_seg_value(self.paragraph[index])
+                    if len(_dict)>0:
+                        self.segment_dict[segment_name]=_dict
+
+                    seg_counter+=1
+
+            ##キーワードが含まれているか flag→True
+            for w in start_header:
+                if w in sentence:
+                    flag=True
+            for w in start_keyword:
+                if w in sentence:
+                    flag=True
+
+        ###########開始の手がかり語がない場合#####################
+        if seg_counter == 0:
+            flag=False
+            flag2=True
+            for index,sentence in enumerate(self.sentences):
+                if flag2:  #一度endwordが来たらbreak
+                    ##キーワードが含まれているか flag→True
+                    if "｡" not in sentence and "､" not in sentence:
+                        for sudden in start_suddenly:
+                            if sudden in sentence:
+                                flag=True
+
+
+
+                    if flag:
+                        ##キーワードが含まれているか flag→False
+                        for w in end_header:
+                            if w in sentence:
+                              flag2=False
+
+                        if flag2 and "｡" not in sentence and "､" not in sentence:
+                            segment_name=sentence
+                            _dict=self.find_seg_value(self.paragraph[index])
+                            if len(_dict)>0:
+                                self.segment_dict[segment_name]=_dict
+
 
 def _seg_find_keyword():
     f = open('./txt/find_seg.txt', 'r')
@@ -222,68 +223,69 @@ def extract_value(sentence,item):
 
 
 def make_newsentence(d,kakariuke_list,item):
-  ###itemが入っている文節とつながっている文章をつくる####
-  for k,v in d.items():
-    if item in v:
-      index=k
-      break
+    ###itemが入っている文節とつながっている文章をつくる####
+    for k,v in d.items():
+        if item in v:
+          index=k
+          break
 
-  nlist=[]
-  for li in kakariuke_list:
-    if index in li:
-      for l in li:
-        nlist.append(l)
-  nlist=list(set(nlist))
+    nlist=[]
+    for li in kakariuke_list:
+        if index in li:
+            for l in li:
+                nlist.append(l)
 
-  new_sentence=""
-  for nl in nlist:
-    if nl>=0:
-      new_sentence += d[nl]
+    nlist=list(set(nlist))
 
-  return new_sentence
+    new_sentence=""
+    for nl in nlist:
+        if nl>=0:
+            new_sentence += d[nl]
+
+    return new_sentence
 
 def extract_pre_value(phrase,item):
-  phrase=phrase.replace(" ","")
-  phrase=zh(phrase)
-  prev_re = find_prev_re()
+    phrase=phrase.replace(" ","")
+    phrase=zh(phrase)
+    prev_re = find_prev_re()
 
-  for p in phrase.split("､"):
-    if item in p:
-      for pre in prev_re:
-        if re.search(pre,p):
-          value=re.search(pre,p).group()
+    for p in phrase.split("､"):
+        if item in p:
+            for pre in prev_re:
+                if re.search(pre,p):
+                    value=re.search(pre,p).group()
 
-  try:
-    return value
-  except UnboundLocalError:
-    return "prev"
+    try:
+        return value
+    except UnboundLocalError:
+        return "prev"
 
 
 def calc_pre_value(float_value,_re):
-  pencent_re = "[\d.]+%"
-  value_re   = "[\d.,百千万億兆]+円"
+    pencent_re = "[\d.]+%"
+    value_re   = "[\d.,百千万億兆]+円"
 
-  if "%" in _re:
-    X=re.search(pencent_re,_re).group().replace("%","")
-    X=float(X)
-    if "増" in _re:
-      return float_value*100/(100+X)
-    elif "減" in _re:
-      return float_value*100/(100-X)
-    else:
-      return float_value*(100/X)
+    if "%" in _re:
+        X=re.search(pencent_re,_re).group().replace("%","")
+        X=float(X)
+        if "増" in _re:
+            return float_value*100/(100+X)
+        elif "減" in _re:
+            return float_value*100/(100-X)
+        else:
+            return float_value*(100/X)
 
-  elif "円" in _re:
-    X=re.search(value_re,_re).group().replace("円","")
-    X=float(kanji_to_num(X))
-    if "増" in _re:
-      return float_value-X
-    elif "減" in _re:
-      return float_value+X
+    elif "円" in _re:
+        X=re.search(value_re,_re).group().replace("円","")
+        X=float(kanji_to_num(X))
+        if "増" in _re:
+             return float_value-X
+        elif "減" in _re:
+            return float_value+X
+        else:
+            return 0
     else:
-      return 0
-  else:
-    return 0
+        return 0
 
 def kanji_to_num(value):
       value=value.replace(",","")
@@ -329,70 +331,67 @@ def kanji_to_num(value):
 
 
 def find_reason_items():
-  f = open('./txt/find_items.txt', 'r')
-  items=[]
-  for line in f:
-    line=line.replace("\n","")
-    items.append(line)
-  f.close()
-  return items
+    f = open('./txt/find_items.txt', 'r')
+    items=[]
+    for line in f:
+        line=line.replace("\n","")
+        items.append(line)
+    f.close()
+    return items
 
 def find_prev_re():
-  f = open('./txt/find_prev.txt', 'r')
-  items=[]
-  for line in f:
-    line=zh(line.replace("\n","").replace("(","\(").replace(")","\)"))
-    re = line.replace("dd","+[\d.,百千万億兆]+")
-    items.append(re)
-  f.close()
-  return items
+    f = open('./txt/find_prev.txt', 'r')
+    items=[]
+    for line in f:
+        line=zh(line.replace("\n","").replace("(","\(").replace(")","\)"))
+        re = line.replace("dd","+[\d.,百千万億兆]+")
+        items.append(re)
+    f.close()
+    return items
 
 def debt_check(phrase,float_num):
-  if "赤字" in phrase or "営業損失" in phrase or "の損失となりました" in phrase:
-    return float_num * -1
-  else:
-    return float_num
+    if "赤字" in phrase or "営業損失" in phrase or "の損失となりました" in phrase:
+        return float_num * -1
+    else:
+        return float_num
 
 def pre_phrase(phrases,i):
-  #iの一個前のphrase
-  if i>0:
-    return phrases[i-1]
-  else:
-    return ""
+    #iの一個前のphrase
+    if i>0:
+        return phrases[i-1]
+    else:
+        return ""
 
 def post_phrase(phrases,i):
-  #iの一個後のphrase
-  try:
-    return phrases[i+1]
-  except IndexError:
-    return ""
+    #iの一個後のphrase
+    try:
+        return phrases[i+1]
+    except IndexError:
+        return ""
 
 def around_extract_pre_value(pre_p,phrase,post_p):
-  prev_re = find_prev_re()
+    prev_re = find_prev_re()
 
-  pre=""
-  for _re in prev_re:
-    if re.search(_re,pre_p):
-      pre=re.search(_re,pre_p).group()
-  post=""
-  for _re in prev_re:
-    if re.search(_re,post_p):
-      post=re.search(_re,post_p).group()
+    pre=""
+    for _re in prev_re:
+        if re.search(_re,pre_p):
+            pre=re.search(_re,pre_p).group()
+    post=""
+    for _re in prev_re:
+        if re.search(_re,post_p):
+            post=re.search(_re,post_p).group()
 
- if len(pre)==0 and len(post)==0:
-    return ""
-  elif len(pre) ==0 and len(post)>0:
-    return post
-  elif len(pre) >0 and len(post)==0:
-    return pre
-  else:
+    if len(pre)==0 and len(post)==0:
+        return ""
+    elif len(pre) ==0 and len(post)>0:
+        return post
+    elif len(pre) >0 and len(post)==0:
+        return pre
 
     if "ました" in post_p:
-      return post
+        return post
     else:
-      return ""
-
-
+        return ""
 
 if __name__ == '__main__':
     sentence="営業利益は前連結会計年度に比べて846億円減少し122億円の損失となりました"
