@@ -2,8 +2,10 @@
 
 import zenhan
 import CaboCha
+from xml.etree.ElementTree import *
+from typing import List, Dict
 
-
+# TODO koremada
 class ReasonAnalysis(object):
     def __init__(self):
         self.reason_dict = {}
@@ -14,11 +16,11 @@ class ReasonAnalysis(object):
         return self.reason_dict
 
     def find_reason_sentences(self):
-        items = find_reason_items()
-        keywords = find_reason_keyword()
+        items = read_keyword('find_items.txt')
+        keywords = read_keyword('find_reason.txt')
 
-        first_paragraph = first_paragraph_words()
-        second_paragraph = second_paragraph_words()
+        first_paragraph = read_keyword('first_paragraph.txt')
+        second_paragraph = read_keyword('second_paragraph.txt')
 
         flag = False
 
@@ -77,75 +79,55 @@ class ReasonAnalysis(object):
 
             prev_label = tmp_label # tmp_labelを一つ昔のprev_labelにする
 
-
-# def first_paragraph_words():
-#     f = open('../../inputs/txt/first_paragraph.txt', 'r')
-#     items = []
-#     for line in f:
-#         line = line.replace("\n", "")
-#         items.append(line)
-#     f.close()
-#     return items
-#
-#
-# def second_paragraph_words():
-#     f = open('../../inputs/txt/second_paragraph.txt', 'r')
-#     items = []
-#     for line in f:
-#         line = line.replace("\n", "")
-#         items.append(line)
-#     f.close()
-#     return items
-#
-#
-# def find_reason_items():
-#     f = open('../../inputs/txt/find_items.txt', 'r')
-#     items = []
-#     for line in f:
-#         line = line.replace("\n", "")
-#         items.append(line)
-#     f.close()
-#     return items
-#
-# def find_reason_keyword():
-#     f = open('../../inputs/txt/find_reason.txt', 'r')
-#     keywords = []
-#     for line in f:
-#         line = line.replace("\n", "") # :thinking: このreplaceはなんのため？
-#         keywords.append(line)
-#     f.close()
-#     return keywords
-
-def read_keyword(filename, dirname='../../inputs/txt/'):
+def read_keyword(filename:str, dirname:str='../../inputs/txt/') -> List[str]:
+    """
+    @description read keyword from file
+    @param filename object file name
+    @param dirname object directory name
+    @return keyword string list
+    """
     with open(dirname+filename, 'r') as f:
         t = f.read().rstrip().split('\n')
     return t
 
-def zh(text):
-    text = str(zenhan.z2h(text))
-    text = text.replace("〜", "~").replace("ー", "-")
+def zh(text:str) -> str:
+    """
+    @description convert zenkaku to hankaku
+    @param text object text
+    @return hankaku text
+    """
+    text = str(zenhan.z2h(text)).replace("〜", "~").replace("ー", "-")
     return text
 
-def _findstart(keywords,d,sentence):
+def findstart(keywords:List[str], d:Dict[int, str], sentence:str) -> List[int]:
+    """
+    @description get index of reason keyword
+    @param keywords keyword string list
+    @param d dictionary {sentence index : sentence}
+    @param sentence object sentence
+    @return point
+    """
     indexes = []
     for kw in keywords:
         kw = kw.replace("､", "、")
         if kw in sentence:
-            length = len(sentence[:sentence.index(kw)+len(kw)])
+            length = len(sentence[:sentence.index(kw)+len(kw)]) # kwまでの文章長
             x = 0
-            for k,v in d.items():
-                if x >= length:
-                    break
-                else:
-                    x += len(v)
-            index = k-1
+            for k, v in d.items():
+                if x >= length: break
+                else: x += len(v)
+            index = k-1 #kw出現位置のdict index
             indexes.append(index)
-
     return indexes
 
-def reason_part(sentence):
+def reason_part(sentence:str) -> str:
+    """
+    @description extract reason part from object sentence
+    @param sentence object sentence
+    @return reason part sentece
+    """
     # 係り受け解析して、理由を示す単語を含む文節以上の文を抽出
-    sentence = sentence.replace("､", "、")
+    sentence = sentence.replace("､", "、") # やる必要ある？
 
     # cabochaで構文解析
     c = CaboCha.Parser()
@@ -156,12 +138,12 @@ def reason_part(sentence):
     d = {}
     kakariuke_list = []
 
-    ##########TODO XMLにしてparseする######################
+    #構文解析結果をparse
     for line in tree.toString(CaboCha.FORMAT_LATTICE).split("\n"):
         tmp_dict = {}
         if line.split(" ")[0] == "*":
-            tag = int(line.split(" ")[1])
-            desti = int(line.split(" ")[2].replace("D",""))
+            tag = int(line.split(" ")[1]) # 文節番号
+            desti = int(line.split(" ")[2].replace("D","")) # 係り受け先の文節番号
 
             flag = True
             for l in kakariuke_list:
@@ -173,23 +155,24 @@ def reason_part(sentence):
 
         else:
             try:
-                d[tag] += line.split("\t")[0]
+                d[tag] += line.split("\t")[0] # 表層形
             except:
                 d[tag] = line.split("\t")[0]
 
-
-    indexes = _findstart(keywords,d,sentence)
+    # reason keyword出現位置を取得
+    indexes = findstart(keywords,d,sentence)
     nans = []
-    for index in indexes:
+    for i in indexes:
         for nl in kakariuke_list:
-            if index in nl:
+            if i in nl:
                 for l in nl:
-                    if 0 < l <= index:
+                    if 0 < l <= i:
                         nans.append(l)
+
     ans = ""
     for key in list(set(nans)):
         ans += d[key]
-    ans = ans.replace("、", "､")
+    ans = ans.replace("、", "､") # やる必要ある？
 
     return ans
 
