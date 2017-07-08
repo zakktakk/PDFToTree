@@ -48,6 +48,6 @@ def read(path, debug=0, password='', pagenos=set(), maxpages=0, outfile=None,
 
 
 if __name__ == '__main__':
-    path = "../../inputs/pdf/nakami.pdf"
+    path = "../../../inputs/pdf/nakami.pdf"
 
     print(read(path))

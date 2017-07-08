@@ -1,4 +1,12 @@
+# -*- coding: utf-8 -*-
+# ref : http://qiita.com/korkewriya/items/72de38fc506ab37b4f2d
+
 import sys
+import os
+import zenhan
+
+from io import StringIO
+
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
@@ -9,106 +17,101 @@ from pdfminer.cmapdb import CMapDB
 from pdfminer.layout import LAParams
 from pdfminer.image import ImageWriter
 
-# main
-def main(argv):
-    import getopt
-    def usage():
-        print ('usage: %s [-d] [-p pagenos] [-m maxpages] [-P password] [-o output]'
-               ' [-C] [-n] [-A] [-V] [-M char_margin] [-L line_margin] [-W word_margin]'
-               ' [-F boxes_flow] [-Y layout_mode] [-O output_dir] [-R rotation]'
-               ' [-t text|html|xml|tag] [-c codec] [-s scale]'
-               ' file ...' % argv[0])
-        return 100
+from subprocess import call
+from tqdm import tqdm
+from PyPDF2 import PdfFileWriter, PdfFileReader
+
+def pdf_to_text(path):
     try:
-        (opts, args) = getopt.getopt(argv[1:], 'dp:m:P:o:CnAVM:L:W:F:Y:O:R:t:c:s:')
-    except getopt.GetoptError:
-        return usage()
-    if not args: return usage()
-    # debug option
-    debug = 0
-    # input option
-    password = ''
-    pagenos = set()
-    maxpages = 0
-    # output option
-    outfile = None
-    outtype = None
-    imagewriter = None
-    rotation = 0
-    layoutmode = 'normal'
-    codec = 'utf-8'
-    pageno = 1
-    scale = 1
-    caching = True
-    showpageno = True
-    laparams = LAParams()
-    for (k, v) in opts:
-        if k == '-d': debug += 1
-        elif k == '-p': pagenos.update( int(x)-1 for x in v.split(',') )
-        elif k == '-m': maxpages = int(v)
-        elif k == '-P': password = v
-        elif k == '-o': outfile = v
-        elif k == '-C': caching = False
-        elif k == '-n': laparams = None
-        elif k == '-A': laparams.all_texts = True
-        elif k == '-V': laparams.detect_vertical = True
-        elif k == '-M': laparams.char_margin = float(v)
-        elif k == '-L': laparams.line_margin = float(v)
-        elif k == '-W': laparams.word_margin = float(v)
-        elif k == '-F': laparams.boxes_flow = float(v)
-        elif k == '-Y': layoutmode = v
-        elif k == '-O': imagewriter = ImageWriter(v)
-        elif k == '-R': rotation = int(v)
-        elif k == '-t': outtype = v
-        elif k == '-c': codec = v
-        elif k == '-s': scale = float(v)
-    #
+        text=read(path)
+
+    except:
+        #PDFのdecrypt
+        pdf_filename_decr=os.getcwd()+"/decrypted.pdf"
+        command="qpdf --password='' --decrypt "+path+" "+pdf_filename_decr
+
+        call('qpdf --password=%s --decrypt %s %s' %('', path, pdf_filename_decr), shell=True)
+        os.system(command)
+
+        text=read(pdf_filename_decr)
+
+
+    text = str(zenhan.z2h(text))
+    text = text.replace("〜","~").replace("ー","-").replace("\x0c","").replace("\xa0","")
+
+    new_text=""
+    for text in text.split("\n"):
+        if ("株" in text or "㈱" in text) and "平成" in text and "決算短信" in text:
+            for t in text.split("-"):
+                if 0<len(t) \
+                    and not(("株" in t or "㈱" in t) and "平成" in t and "決算短信" in t) \
+                    and not(t.replace("-","").replace(" ","").isdigit()):
+
+                    if "､" not in t and "｡" not in t and len(t)<30:
+                        new_text+="\n"+t+"\n"
+                    else:
+                         new_text+=t
+
+        elif 0<len(text.replace(" ","")) \
+            and not(("株" in text or "㈱" in text) and "平成" in text and "決算短信" in text) \
+            and not(text.replace("-","").replace(" ","").isdigit()):
+
+            if "､" not in text and "｡" not in text and len(text)<30:
+              new_text+="\n"+text+"\n"
+            else:
+              new_text+=text
+
+
+    return new_text
+
+def read(path, debug=0, password='', pagenos=set(), maxpages=0, outfile=None,
+         outtype=None, imagewriter=None, rotation=0, stripcontrol=False,
+         layoutmode='normal', codec='utf-8', pageno=1, scale=1,
+         caching=True, showpageno=True, laparams=LAParams()):
+    """
+    @description get text on input pdf
+    @param path path to pdf file
+    @return text on pdf
+    """
+    import re
+    space = re.compile(r"[ 　]+")
+
+    retstr = StringIO()
+
     PDFDocument.debug = debug
     PDFParser.debug = debug
     CMapDB.debug = debug
-    PDFResourceManager.debug = debug
     PDFPageInterpreter.debug = debug
-    PDFDevice.debug = debug
-    #
+
     rsrcmgr = PDFResourceManager(caching=caching)
-    if not outtype:
-        outtype = 'text'
-        if outfile:
-            if outfile.endswith('.htm') or outfile.endswith('.html'):
-                outtype = 'html'
-            elif outfile.endswith('.xml'):
-                outtype = 'xml'
-            elif outfile.endswith('.tag'):
-                outtype = 'tag'
-    if outfile:
-        outfp = file(outfile, 'w')
-    else:
-        outfp = sys.stdout
-    if outtype == 'text':
-        device = TextConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
+    laparams.detect_vertical = True
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams,
                                imagewriter=imagewriter)
-    elif outtype == 'xml':
-        device = XMLConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
-                              imagewriter=imagewriter)
-    elif outtype == 'html':
-        device = HTMLConverter(rsrcmgr, outfp, codec=codec, scale=scale,
-                               layoutmode=layoutmode, laparams=laparams,
-                               imagewriter=imagewriter)
-    elif outtype == 'tag':
-        device = TagExtractor(rsrcmgr, outfp, codec=codec)
-    else:
-        return usage()
-    for fname in args:
-        fp = file(fname, 'rb')
-        interpreter = PDFPageInterpreter(rsrcmgr, device)
-        for page in PDFPage.get_pages(fp, pagenos,
-                                      maxpages=maxpages, password=password,
-                                      caching=caching, check_extractable=True):
+
+    fp = open(path, 'rb')
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    pages = PdfFileReader(path, "rb").getNumPages()
+    flag = True
+
+    for number,page in enumerate(PDFPage.get_pages(fp, pagenos,
+                                    maxpages=maxpages, password=password,
+                                    caching=caching, check_extractable=True)):
+        if "Toyota" in path:
+            if number > pages-5:
+                flag=False
+        if flag:
             page.rotate = (page.rotate+rotation) % 360
             interpreter.process_page(page)
-        fp.close()
-    device.close()
-    outfp.close()
-    return
 
-if __name__ == '__main__': sys.exit(main(sys.argv))
+    text = retstr.getvalue()
+    text = re.sub(space, "", text) # これが必要か要検討
+
+    fp.close()
+    device.close()
+
+    return text
+
+if __name__ == '__main__':
+    path = "../../inputs/pdf/nakami.pdf"
+
+    print(read(path))
