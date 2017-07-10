@@ -71,7 +71,6 @@ class XMLParse(object):
         """
         fontsize = []
         leftpos = []
-        rightpos = []
 
         after_mokuji_page = self.after_mokuji_elm(mokuji=3)
         for page in after_mokuji_page: # pageごとに処理
@@ -80,14 +79,9 @@ class XMLParse(object):
                 text = box.findall(".//text")
                 fontsize.append(self.get_text_fontsize(text))
                 leftpos.append(self.get_text_line_left(text)[0])
-                rightpos.append(self.get_text_line_right(text)[0])
 
         self.default_fontsize = statistics.mode(fontsize)
         self.default_left_pos = statistics.mode(leftpos)
-        self.default_right_pos = statistics.mode(rightpos)
-
-        print(self.default_left_pos)
-        print(self.default_right_pos)
 
     def is_topic(self, text:str, leftpos) -> str:
         """topic or notを判定する, 暫定版
@@ -99,23 +93,27 @@ class XMLParse(object):
         if re.match(r'[･]', text):
             return "dot"
 
-        if re.match(r'[1-9] ', text):
-            t = re.search(r'[1-9] ', text).group().rstrip()
-            return "num,"+t
+        if re.match(r'[0-9]+ ', text):
+            t = re.search(r'[0-9]+ ', text).group().rstrip()
+            return "space_num,"+t
 
-        if re.match(r'\([1-9]+?\)', text):
-            t = re.search(r'\([1-9]+?\)', text).group().replace("(", "").replace(")", "")
+        if re.match(r'[0-9]+\.', text):
+            t = re.search(r'[0-9]+\.', text).group()[:-1]
+            return "dot_num,"+t
+
+        if re.match(r'\([0-9]+?\)', text):
+            t = re.search(r'\([0-9]+?\)', text).group().replace("(", "").replace(")", "")
             return "par_num,"+t
+
+        if re.match(r'[①-⑩]', text):
+            t = re.search(r'[①-⑩]', text).group().rstrip()
+            return "cir_num,"+str(circle_num_dict[t])
 
         if re.match(r'<.+?>', text):
             return "toge"
 
         if re.match(r'\[.+?\]', text):
             return "dai"
-
-        if re.match(r'[①-⑩]', text):
-            t = re.search(r'[①-⑩]', text).group().rstrip()
-            return "cir_num,"+str(circle_num_dict[t])
 
         if re.match(r'【.+?】', text):
             return "chu"
@@ -126,15 +124,15 @@ class XMLParse(object):
         if re.match(r'『.+?』', text):
             return "d_kagi"
 
-        if leftpos < self.default_left_pos:
-            return 'left'
+        if re.match(r'[◇]', text):
+            return "dia"
 
         return ""
 
     def is_needless(self, leftpos, text) -> bool:
         """いらない文か -> ページ番号や右上文字の除去 or 数字だけの行 or 空行
         """
-        return leftpos[0] > 150 or text.replace(".", "", 1).isdigit() or text == ''
+        return leftpos[0] > 150 or text.replace(",", "").replace(".", "", 1).isdigit() or len(text) <= 1
 
     def is_same_param(self, form1, fontsize1, form2, fontsize2):
         return (fontsize1 == fontsize2) and (form1.split(',')[0] == form2.split(',')[0])
@@ -163,7 +161,7 @@ class XMLParse(object):
             if len(ll) > 1:
                 if ll[0] == form[0] and int(ll[1]) == int(form[1])-1:
                     return int(p)
-        return self.tree_depth
+        return self.tree_depth + 1
 
 
     def make_tree(self):
@@ -175,27 +173,28 @@ class XMLParse(object):
 
             for box in text_box_elm: # 1行ごとに処理
                 text = box.findall(".//text")
+
                 leftpos = self.get_text_line_left(text)
-                rightpos = self.get_text_line_right(text)
                 fontsize = self.get_text_fontsize(text)
-                t = self.get_text(text)
+                tt = self.get_text(text).split('\n')
 
-                # もし不要行でなければ処理
-                if not self.is_needless(leftpos, t):
-                    form = self.is_topic(t, leftpos[0])
-                    if form: # もしトピックならば
-                        if paragraph: # もしparagraphにテキストが溜まってたら
-                            self.tree_lst.append(Node(paragraph, parent=self.tree_lst[self.tree_dict[str(self.tree_depth)]["lst_pos"]]))
-                            paragraph = ""
+                for t in tt # なんか間に改行が含まれることがある
+                    # もし不要行でなければ処理
+                    if not self.is_needless(leftpos, t):
+                        form = self.is_topic(t, leftpos[0])
+                        if form: # もしトピックならば
+                            if paragraph: # もしparagraphにテキストが溜まってたら
+                                self.tree_lst.append(Node(paragraph, parent=self.tree_lst[self.tree_dict[str(self.tree_depth)]["lst_pos"]]))
+                                paragraph = ""
 
-                        self.estimate_tree_pos(form, leftpos, fontsize)
-                        self.tree_lst.append(Node(t, parent=self.tree_lst[self.tree_dict[str(self.tree_depth-1)]["lst_pos"]]))
+                            self.estimate_tree_pos(form, leftpos, fontsize)
+                            self.tree_lst.append(Node(t, parent=self.tree_lst[self.tree_dict[str(self.tree_depth-1)]["lst_pos"]]))
 
-                    else:
-                        paragraph += t
+                        else:
+                            paragraph += t.replace('\n', '').replace(' ', '')
 
         for pre, fill, node in RenderTree(self.tree_lst[0]):
             print("%s%s" % (pre, node.name))
 
-a = XMLParse("./hoge.xml")
+a = XMLParse("./smbc.xml")
 a.make_tree()
