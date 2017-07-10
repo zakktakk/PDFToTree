@@ -52,6 +52,6 @@ def pdf2xml(pdf_path:str, xml_path:str, password:str='') -> None:
     outfp.close()
 
 if __name__ == '__main__':
-    INPUT = "../../inputs/pdf/4503 Astellas Pharma.pdf"
-    OUTPUT = "./astellas.xml"
+    INPUT = "../../inputs/pdf/nakami.pdf"
+    OUTPUT = "./nakami.xml"
     pdf2xml(INPUT, OUTPUT)

@@ -1,11 +1,11 @@
 # author : Takuro Yamazaki
 
 import mojimoji
-import statistics
 import re
 
 import xml.etree.ElementTree as ET
 
+from scipy.stats import mode
 from typing import List
 from anytree import Node, RenderTree
 
@@ -23,6 +23,8 @@ class XMLParse(object):
         self.tree_dict = {"0":{"lst_pos":0, "format":None, "leftpos":None, "fontsize":None}}
         self.tree_lst = [Node("0")]
         self.tree_depth = 0
+        self.is_only_pth = False
+        self.is_only_rect = False
 
     def get_page_elm(self, page_num:int):
         """get page by index
@@ -54,7 +56,7 @@ class XMLParse(object):
         """get font size
         """
         fontsize = [float(p.attrib["size"]) for p in text_elm if "size" in p.attrib]
-        return statistics.mode(fontsize)
+        return mode(fontsize).mode[0]
 
     def get_text_line_left(self, text_elm) -> List[float]:
         """get text line left position, [左端から, 下から]
@@ -72,7 +74,7 @@ class XMLParse(object):
         fontsize = []
         leftpos = []
 
-        after_mokuji_page = self.after_mokuji_elm(mokuji=3)
+        after_mokuji_page = self.after_mokuji_elm(mokuji=0)
         for page in after_mokuji_page: # pageごとに処理
             text_box_elm = page.findall("./textbox")
             for box in text_box_elm: # 1行ごとに処理
@@ -80,18 +82,17 @@ class XMLParse(object):
                 fontsize.append(self.get_text_fontsize(text))
                 leftpos.append(self.get_text_line_left(text)[0])
 
-        self.default_fontsize = statistics.mode(fontsize)
-        self.default_left_pos = statistics.mode(leftpos)
+        self.default_fontsize = mode(fontsize).mode[0]
+        self.default_left_pos = mode(leftpos).mode[0]
 
-    def is_topic(self, text:str, leftpos) -> str:
+        print(self.default_left_pos)
+
+    def is_topic(self, text:str, fontsize, leftpos) -> str:
         """topic or notを判定する, 暫定版
         これtrue返す必要ないな
         """
         if not text:
             return ""
-
-        if re.match(r'[･]', text):
-            return "dot"
 
         if re.match(r'[0-9]+ ', text):
             t = re.search(r'[0-9]+ ', text).group().rstrip()
@@ -110,22 +111,31 @@ class XMLParse(object):
             return "cir_num,"+str(circle_num_dict[t])
 
         if re.match(r'<.+?>', text):
-            return "toge"
+            return "toge_pth"
 
         if re.match(r'\[.+?\]', text):
-            return "dai"
+            return "dai_pth"
 
         if re.match(r'【.+?】', text):
-            return "chu"
+            return "chu_pth"
 
         if re.match(r'「.+?」', text):
-            return "kagi"
+            return "kagi_pth"
 
         if re.match(r'『.+?』', text):
-            return "d_kagi"
+            return "d_kagi_pth"
 
         if re.match(r'[◇]', text):
-            return "dia"
+            return "dia_rect"
+
+        if re.match(r'[･]', text):
+            return "dot_rect"
+
+        if fontsize > self.default_fontsize:
+            return "big"
+
+        if leftpos < self.default_left_pos - self.default_fontsize:
+            return "left"
 
         return ""
 
@@ -140,17 +150,45 @@ class XMLParse(object):
     def estimate_tree_pos(self, form, leftpos, fontsize) -> None:
         current_dict = self.tree_dict[str(self.tree_depth)]
         # 今の階層と同じparam形式
-        if self.is_same_param(form, fontsize, current_dict['format'], current_dict['fontsize']):
-            self.tree_dict[str(self.tree_depth)] = {"lst_pos":len(self.tree_lst), "format":form, "leftpos":leftpos, "fontsize":fontsize}
+        if self.is_same_param(form, fontsize, current_dict['format'], current_dict['fontsize']): # 1個上と形式が一緒
+            pass
 
-        elif (not "num" in form) or (len(form.split(',')) > 1 and form.split(',')[1] == '1'):
+        elif (len(form.split(',')) > 1 and form.split(',')[1] == '1'): # 数字が1 -> 階層のorigin
+            self.is_only_pth = False
+            self.is_only_rect = False
             self.tree_depth += 1
-            self.tree_dict[str(self.tree_depth)] = {"lst_pos":len(self.tree_lst), "format":form, "leftpos":leftpos, "fontsize":fontsize}
 
-        else:
+        elif "pth" in form: # かっこである
+            self.is_only_rect = False
+
+            if self.is_only_pth:
+                self.tree_depth = self.estimate_back_rect(form)
+            else:
+                self.tree_depth += 1
+                self.is_only_pth = True
+
+        elif "rect" in form: # unordered listである
+            if self.is_only_rect:
+                self.tree_depth = self.estimate_back_rect(form)
+            else:
+                self.tree_depth += 1
+                self.is_only_rect = True
+
+        else: # 数字
+            self.is_only_rect = False
+            self.is_only_pth = False
             self.tree_depth  = self.estimate_back(form)
-            self.tree_dict[str(self.tree_depth)] = {"lst_pos":len(self.tree_lst), "format":form, "leftpos":leftpos, "fontsize":fontsize}
 
+        self.tree_dict[str(self.tree_depth)] = {"lst_pos":len(self.tree_lst), "format":form, "leftpos":leftpos, "fontsize":fontsize}
+
+    def estimate_back_rect(self, form) -> int:
+        # 整合性のあう数字が存在するか否か
+        for p in range(self.tree_depth-1, 0, -1):
+            p = str(p)
+            if form == self.tree_dict[p]["format"]:
+                return int(p)
+
+        return self.tree_depth + 1
 
     def estimate_back(self, form) -> int:
         # 整合性のあう数字が存在するか否か
@@ -165,7 +203,7 @@ class XMLParse(object):
 
 
     def make_tree(self):
-        after_mokuji_page = self.after_mokuji_elm(mokuji=3)
+        after_mokuji_page = self.after_mokuji_elm(mokuji=0)
         paragraph = ""
 
         for page in after_mokuji_page: # pageごとに処理
@@ -178,10 +216,10 @@ class XMLParse(object):
                 fontsize = self.get_text_fontsize(text)
                 tt = self.get_text(text).split('\n')
 
-                for t in tt # なんか間に改行が含まれることがある
+                for t in tt: # なんか間に改行が含まれることがある
                     # もし不要行でなければ処理
                     if not self.is_needless(leftpos, t):
-                        form = self.is_topic(t, leftpos[0])
+                        form = self.is_topic(t, fontsize, leftpos[0])
                         if form: # もしトピックならば
                             if paragraph: # もしparagraphにテキストが溜まってたら
                                 self.tree_lst.append(Node(paragraph, parent=self.tree_lst[self.tree_dict[str(self.tree_depth)]["lst_pos"]]))
@@ -193,8 +231,10 @@ class XMLParse(object):
                         else:
                             paragraph += t.replace('\n', '').replace(' ', '')
 
+        self.tree_lst.append(Node(paragraph, parent=self.tree_lst[self.tree_dict[str(self.tree_depth)]["lst_pos"]]))
+
         for pre, fill, node in RenderTree(self.tree_lst[0]):
             print("%s%s" % (pre, node.name))
 
-a = XMLParse("./smbc.xml")
+a = XMLParse("./nakami.xml")
 a.make_tree()
