@@ -68,13 +68,13 @@ class XMLParse(object):
         """
         return [float(f) for f in text_elm[-2].attrib["bbox"].split(',')]
 
-    def set_topic_param(self):
+    def set_topic_param(self, mokuji=3):
         """get paragraph parameters for classify sentence is topic or paragraph
         """
         fontsize = []
         leftpos = []
 
-        after_mokuji_page = self.after_mokuji_elm(mokuji=0)
+        after_mokuji_page = self.get_page_elm(mokuji+1) # 目次の次のページ
         for page in after_mokuji_page: # pageごとに処理
             text_box_elm = page.findall("./textbox")
             for box in text_box_elm: # 1行ごとに処理
@@ -84,8 +84,6 @@ class XMLParse(object):
 
         self.default_fontsize = mode(fontsize).mode[0]
         self.default_left_pos = mode(leftpos).mode[0]
-
-        print(self.default_left_pos)
 
     def is_topic(self, text:str, fontsize, leftpos) -> str:
         """topic or notを判定する, 暫定版
@@ -98,7 +96,7 @@ class XMLParse(object):
             t = re.search(r'[0-9]+ ', text).group().rstrip()
             return "space_num,"+t
 
-        if re.match(r'[0-9]+\.', text):
+        if re.match(r'[0-9]+\. ', text):
             t = re.search(r'[0-9]+\.', text).group()[:-1]
             return "dot_num,"+t
 
@@ -130,6 +128,9 @@ class XMLParse(object):
 
         if re.match(r'[･]', text):
             return "dot_rect"
+
+        if re.match(r'[]', text):
+            return "defdot_rect"
 
         if fontsize > self.default_fontsize:
             return "big"
@@ -203,7 +204,7 @@ class XMLParse(object):
 
 
     def make_tree(self):
-        after_mokuji_page = self.after_mokuji_elm(mokuji=0)
+        after_mokuji_page = self.after_mokuji_elm(mokuji=3)
         paragraph = ""
 
         for page in after_mokuji_page: # pageごとに処理
@@ -236,5 +237,5 @@ class XMLParse(object):
         for pre, fill, node in RenderTree(self.tree_lst[0]):
             print("%s%s" % (pre, node.name))
 
-a = XMLParse("./nakami.xml")
+a = XMLParse("./xml/toyota.xml")
 a.make_tree()
