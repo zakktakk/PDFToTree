@@ -11,7 +11,27 @@ from pdfminer.converter import XMLConverter
 from pdfminer.cmapdb import CMapDB
 from pdfminer.layout import LAParams
 
-def pdf2xml(pdf_path:str, xml_path:str, password:str='') -> None:
+from subprocess import call
+
+def pdf2xml(pdf_path:str, xml_path:str):
+    try:
+        read(pdf_path, xml_path)
+
+    except:
+        #PDFのdecrypt
+        decr_pdf_path = os.getcwd() + "/decrypted.pdf"
+        command = "qpdf --password='' --decrypt " + path + " " + pdf_filename_decr
+
+        call('qpdf --password=%s --decrypt %s %s' %('', path, pdf_filename_decr), shell=True)
+        os.system(command)
+
+        read(decr_pdf_path, xml_path)
+        command = "rm " + decr_pdf_path
+        call('rm %s' % (decr_pdf_path), shell=True)
+        os.system(command)
+
+
+def read(pdf_path:str, xml_path:str, password:str='') -> None:
     """
     @description convert pdf file to xml file
     @param pdf_path input pdf file path
@@ -54,4 +74,4 @@ def pdf2xml(pdf_path:str, xml_path:str, password:str='') -> None:
 if __name__ == '__main__':
     INPUT = "../../inputs/pdf/3407Asahikasei.pdf"
     OUTPUT = "./asahikasei.xml"
-    pdf2xml(INPUT, OUTPUT)
+    read(INPUT, OUTPUT)
