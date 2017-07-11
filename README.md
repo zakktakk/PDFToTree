@@ -1,1 +1,5 @@
 # PDFtree
+## requirement
+- mojimoji
+- pdfminer
+

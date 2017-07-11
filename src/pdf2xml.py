@@ -2,6 +2,8 @@
 # author : Takuro Yamazaki
 # ref : https://github.com/euske/pdfminer/blob/master/tools/pdf2txt.py
 
+import os
+
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
@@ -20,23 +22,19 @@ def pdf2xml(pdf_path:str, xml_path:str):
     except:
         #PDFのdecrypt
         decr_pdf_path = os.getcwd() + "/decrypted.pdf"
-        command = "qpdf --password='' --decrypt " + path + " " + pdf_filename_decr
+        command = "qpdf --password='' --decrypt " + pdf_path + " " + decr_pdf_path
 
-        call('qpdf --password=%s --decrypt %s %s' %('', path, pdf_filename_decr), shell=True)
+        call('qpdf --password=%s --decrypt %s %s' %('', pdf_path, decr_pdf_path), shell=True)
         os.system(command)
 
         read(decr_pdf_path, xml_path)
-        command = "rm " + decr_pdf_path
-        call('rm %s' % (decr_pdf_path), shell=True)
-        os.system(command)
 
 
-def read(pdf_path:str, xml_path:str, password:str='') -> None:
+def read(pdf_path:str, xml_path:str) -> None:
     """
     @description convert pdf file to xml file
     @param pdf_path input pdf file path
     @param xml_path output xml file path
-    @param password optional parameter, if object pdf is locked, should be added
     """
 
     # set option -> ここは引数に追加すべき?
@@ -44,8 +42,7 @@ def read(pdf_path:str, xml_path:str, password:str='') -> None:
     pagenos = set()
     maxpages = 0
 
-    outfile = xml_path  # xml file path
-
+    password = ''
     imagewriter = None
     codec = 'utf-8'
     caching = True
@@ -53,7 +50,7 @@ def read(pdf_path:str, xml_path:str, password:str='') -> None:
     #
 
     # open output xml file
-    outfp = open(outfile, 'wb')
+    outfp = open(xml_path, 'wb')
     rsrcmgr = PDFResourceManager(caching=caching)
     device = XMLConverter(rsrcmgr, outfp, codec=codec, laparams=laparams,
                           imagewriter=imagewriter)
@@ -70,8 +67,3 @@ def read(pdf_path:str, xml_path:str, password:str='') -> None:
     fp.close()
     device.close()
     outfp.close()
-
-if __name__ == '__main__':
-    INPUT = "../../inputs/pdf/3407Asahikasei.pdf"
-    OUTPUT = "./asahikasei.xml"
-    read(INPUT, OUTPUT)
