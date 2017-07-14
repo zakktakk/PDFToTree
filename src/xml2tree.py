@@ -20,7 +20,7 @@ class XMLParse(object):
         self.xml_path = xml_path
         self.tree = ET.parse(xml_path)
         self.root = self.tree.getroot()
-        self.set_mokuji_page() # 目次ページを設定
+        self._set_mokuji_page() # 目次ページを設定
         self._set_topic_param() # トピックのパラメータ設定
         # topicのみ格納する
         self.tree_dict = {"0":{"lst_pos":0, "format":None, "leftpos":None, "fontsize":None}}
@@ -30,7 +30,7 @@ class XMLParse(object):
         self.is_only_rect = False
         self._make_tree() # make tree
 
-    def set_mokuji_page(self) -> int:
+    def _set_mokuji_page(self) -> int:
         """添付資料の目次を取得, 3~5ページ目のいずれかにあるという仮説
         """
         self.mokuji = 3
@@ -45,44 +45,44 @@ class XMLParse(object):
                     self.mokuji = i
                     return 0
 
-    def _get_page_elm(self, page_num:int):
+    def _get_page_elm(self, page_num:int) -> List[ET.Element]:
         """get page by index
         """
         page_num = str(page_num)
         page_elm = self.root.findall("./page[@id='"+page_num+"']")
         return page_elm
 
-    def _get_all_page_elm(self):
+    def _get_all_page_elm(self) -> List[ET.Element]:
         """get all xml page
         """
         all_page_elm = self.root.findall("./page[@id]")
         return all_page_elm
 
-    def _after_mokuji_elm(self):
+    def _after_mokuji_elm(self) -> List[ET.Element]:
         """get after mokuji page
         """
         after_mokuji_page_elm = self._get_all_page_elm()[self.mokuji:]
         return after_mokuji_page_elm
 
-    def _get_text(self, text_elm) -> str:
+    def _get_text(self, text_elm:List[ET.Element]) -> str:
         """get text line
         """
         text = ""
         for t in text_elm: text += t.text
         return mojimoji.zen_to_han(text).strip() # 最後に空白と改行を削除
 
-    def _get_text_fontsize(self, text_elm) -> float:
+    def _get_text_fontsize(self, text_elm:List[ET.Element]) -> float:
         """get font size
         """
         fontsize = [float(p.attrib["size"]) for p in text_elm if "size" in p.attrib]
         return mode(fontsize).mode[0]
 
-    def _get_text_line_left(self, text_elm) -> List[float]:
+    def _get_text_line_left(self, text_elm:List[ET.Element]) -> List[float]:
         """get text line left position, [左端から, 下から]
         """
         return [float(f) for f in text_elm[0].attrib["bbox"].split(',')]
 
-    def _get_text_line_right(self, text_elm) -> List[float]:
+    def _get_text_line_right(self, text_elm:List[ET.Element]) -> List[float]:
         """get text line right position
         """
         return [float(f) for f in text_elm[-2].attrib["bbox"].split(',')]
@@ -170,7 +170,7 @@ class XMLParse(object):
         """
         return leftpos[0] > 150 or text.replace(",", "").replace(".", "", 1).isdigit() or len(text) <= 1
 
-    def _is_same_param(self, form1:str, fontsize1:float, form2:str, fontsize2:float) -> bool:
+    def _is_same_param(self, form1:str, form2:str) -> bool:
         """入力1と入力2が同じパラグラフか, leftpos見るとおかしくなるから無視
         """
         if form1 is not None and form2 is not None:
@@ -182,7 +182,7 @@ class XMLParse(object):
         """
         current_dict = self.tree_dict[str(self.tree_depth)]
         # 今の階層と同じparam形式
-        if self._is_same_param(form, fontsize, current_dict['format'], current_dict['fontsize']): # 1個上と形式が一緒
+        if self._is_same_param(form, current_dict['format']): # 1個上と形式が一緒
             pass
 
         elif (len(form.split(',')) > 1 and form.split(',')[1] == '1'): # 数字が1 -> 階層のorigin

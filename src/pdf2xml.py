@@ -15,7 +15,7 @@ from pdfminer.layout import LAParams
 
 from subprocess import call
 
-def pdf2xml(pdf_path:str, xml_path:str):
+def pdf2xml(pdf_path:str, xml_path:str) -> None:
     try:
         read(pdf_path, xml_path)
 
